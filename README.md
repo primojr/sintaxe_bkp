@@ -1,3 +1,3 @@
-# `backup_sintaxe`
+# backup_sintaxe
 
 Armazenar scripts relexantes
