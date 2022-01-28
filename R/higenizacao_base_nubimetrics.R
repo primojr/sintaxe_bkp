@@ -4,10 +4,10 @@ source("~Documents/_R/Script/Apoio/pack.R")
 #source("~GERSON/01_DBM/Script R/")
 setwd("~Documents/_GERSON/ML")
 
-## 
+##
 # 00. LOOP PARA CARREGAR AS BASES CONSOLIDADAS ----
 ##
-fsn = list.files(recursive = TRUE) %>% 
+fsn = list.files(recursive = TRUE) %>%
   .[grepl("csv", .)==TRUE] %>%
   .[str_detect(.,"/2018") == FALSE] #%>% .[str_detect(.,"Mexico") == TRUE]
 
@@ -25,7 +25,7 @@ for(k in 1:length(fsn)){
     ) %>% mutate(., pais = sub("/.*","", fsn[k])) #, Marca = 'Ano2018')
   ml = rbind(ml.ar0,ml)
 }
-rm(ml.ar0) 
+rm(ml.ar0)
 ml = as_tibble(ml)
 
 #write.csv2(ml.pais, "dadosanalise.csv", row.names=FALSE)
@@ -36,7 +36,7 @@ fwrite(ml, "~Documents/_R/Data.frame/ml_cru.csv",sep = ";")
 #
 # 01. RECATEGORIZAÇÃO DO SEGEMENTO parte.1 ----
 #
-# 01.1 DESCARTAR 
+# 01.1 DESCARTAR
 filter_seg = ml %>%
    filter(str_detect(Categoria_Nivel_3, 'Escalera|Tanq|Home|Paint') == TRUE) %>% distinct(Codigo_de_Publicacion)
 ml = ml %>% filter(Codigo_de_Publicacion %notin% filter_seg$Codigo_de_Publicacion)
@@ -61,11 +61,11 @@ ml = ml %>% mutate(
 
 #
 # 02 PADRONIZAR A CATEGORIA DE FERRAMENTAS ----
-# Categoria nivel 4 = categoria nivel 5 
+# Categoria nivel 4 = categoria nivel 5
 #
 ml = ml %>%
    mutate(
-      Categoria_Nivel_5 = Categoria_Nivel_5 
+      Categoria_Nivel_5 = Categoria_Nivel_5
       %>% if_else(Categoria_Nivel_5 == '-', Categoria_Nivel_4,. )
       %>% if_else(. == Categoria_Nivel_4, ., str_c(Categoria_Nivel_4, ., sep = " "))
       %>% str_to_lower()
@@ -73,8 +73,8 @@ ml = ml %>%
 
 
 
-# ml %>% tabyl(Categoria_Nivel_5, Categoria_Nivel_3) %>% 
-#    write.csv2(.,"~Documents/_R/Data.frame/catXseg.csv", row.names = FALSE, fileEncoding ="UTF-8")  
+# ml %>% tabyl(Categoria_Nivel_5, Categoria_Nivel_3) %>%
+#    write.csv2(.,"~Documents/_R/Data.frame/catXseg.csv", row.names = FALSE, fileEncoding ="UTF-8")
 
 
 ##
@@ -104,18 +104,18 @@ for(k in 1:length(seg)) {
 rm(filter_seg)
 ml %>% count(Categoria_Nivel_5) %>% view
 
-## 
-# 04. ACERTO DO TITULO DA PUBLICAO  ----
-# OBJ: manter sempre o mesmo titulo para o mesmo codigo do anuncio. 
 ##
-titulo = ml %>% 
-   select(., Codigo_de_Publicacion, Titulo_Publicacion, Mes) %>% 
-   arrange(Codigo_de_Publicacion,desc(Mes)) %>% 
-   mutate(ranking = ave(rep(1, length(Codigo_de_Publicacion)), Codigo_de_Publicacion, FUN=cumsum)) %>% 
-   filter(ranking == 1) %>% 
+# 04. ACERTO DO TITULO DA PUBLICAO  ----
+# OBJ: manter sempre o mesmo titulo para o mesmo codigo do anuncio.
+##
+titulo = ml %>%
+   select(., Codigo_de_Publicacion, Titulo_Publicacion, Mes) %>%
+   arrange(Codigo_de_Publicacion,desc(Mes)) %>%
+   mutate(ranking = ave(rep(1, length(Codigo_de_Publicacion)), Codigo_de_Publicacion, FUN=cumsum)) %>%
+   filter(ranking == 1) %>%
    select(Codigo_de_Publicacion, Titulo_Publicacion)
 
-ml <- left_join(ml, titulo, by="Codigo_de_Publicacion") %>% 
+ml <- left_join(ml, titulo, by="Codigo_de_Publicacion") %>%
    mutate(Titulo_Publicacion = str_to_lower(Titulo_Publicacion.y)
           ,Categoria_Completa = str_trim(Categoria_Completa) %>% str_to_lower(.))
 rm(titulo)
@@ -123,7 +123,7 @@ rm(titulo)
 
 ##
 # 05. ACERTO DO LINK DA IMAGEM DA PUBLICAO  ----
-# OBJ: manter sempre a mesma imagem para o mesmo codigo do anuncio. 
+# OBJ: manter sempre a mesma imagem para o mesmo codigo do anuncio.
 #
 foto = ml %>%
    select(., Codigo_de_Publicacion, Foto_Publicacion, Mes) %>%
@@ -139,7 +139,7 @@ rm(foto)
 
 ##
 # 06. ACERTO DO LINK DA PUBLICAO  ----
-# OBJ: manter sempre o mesmo imagem para o mesmo codigo do anuncio. 
+# OBJ: manter sempre o mesmo imagem para o mesmo codigo do anuncio.
 #
 link = ml %>%
    select(., Codigo_de_Publicacion, Link_a_Publicacion, Mes) %>%
@@ -154,18 +154,18 @@ rm(link)
 
 
 
-## 
+##
 # 06 AJUSTE DA CATEGORIA NIVEL 5 (Categoria da Ferramenta) ----
 # Obs: Ajuste feito por BU separadamente
 #
-## 
+##
 
 # ___6.1 ACCESSORIES ----
-ml = ml %>% 
-   mutate(Categoria_Nivel_5 = Categoria_Nivel_5 %>% str_trim() %>% str_to_title() 
-          ### Manual Tools 
+ml = ml %>%
+   mutate(Categoria_Nivel_5 = Categoria_Nivel_5 %>% str_trim() %>% str_to_title()
+          ### Manual Tools
           %>% if_else(Categoria_Nivel_3 == 'Manual Tools' & str_detect(Categoria_Nivel_5,'[Ss]et|[Kk]it|Jog|Jueg|Estojo') , 'Screw Driving & Sets',.)
-          # Validacao com CATEGORIA_NIVEL_5  
+          # Validacao com CATEGORIA_NIVEL_5
           %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(. ,'Bat[ée]|Carga|Carreg') , 'Batery and Charges',.)
           %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(. ,'Manu') , 'Hacksaw blade',.)
           %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(. ,'Hoja|L[âa]mi') , 'Saw blade',.)
@@ -190,7 +190,7 @@ ml = ml %>%
           %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(. ,'Fresa') , 'Routing',.)
           %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(. ,'Micro|Mini|Lima') , 'AC Rotary tool',.)
           %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(. ,'-|Othe') , 'Others AC',.)
-          # Validacao com TITULO PUBLICAO  
+          # Validacao com TITULO PUBLICAO
           %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(Titulo_Publicacion,'set de herramientas|juego set|jogo de soquetes|jogo de ferramentas|estojo de ferramentas|
                                                                                          |set de ferramentas|jogo de brocas e bits|ponta bit|ponta philips|bit philips|
                                                                                          |ponta imantada bit|juego de mechas|juego mechas') , 'Screw Driving & Sets',.)
@@ -210,10 +210,10 @@ ml = ml %>%
           %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(Titulo_Publicacion,'fresa|broca forstner|brocas forstner|broca para orificions en madera|Forstner') , 'Routing',.)
           %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(Titulo_Publicacion,'martillo demoledor') , 'Demolition Hammer',.)
           %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(Titulo_Publicacion,'disco sierra|lamina de sierra circular|disco sierra circular|disco freud|
-                                                                                          |sierra melamina|disco de serra|ferra freud|lamina serra circular') , 'Circular Saw Blades',.)    
+                                                                                          |sierra melamina|disco de serra|ferra freud|lamina serra circular') , 'Circular Saw Blades',.)
           %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(Titulo_Publicacion,'broca sds plus|mecha sds plus|brocas y cinzeles sds|broca furo quadrado|
-                                                                                          |kit sds plus') , 'HammerDrillingsmall',.)    
-          %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(Titulo_Publicacion,'broca sds max|mecha sds max') , 'Hammerdr.large/other',.)    
+                                                                                          |kit sds plus') , 'HammerDrillingsmall',.)
+          %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(Titulo_Publicacion,'broca sds max|mecha sds max') , 'Hammerdr.large/other',.)
           %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(Titulo_Publicacion,'brocas copa|sierra copa|broca sierra|broca para azulejos|broca concreto pasamuros|
                                                                                           |sierra para hoyo|sierra perforadora|sierra de diamante|sierra diente cortador|
                                                                                           |sierra de taladro|sierra corta circulos|sierra de corona|serra copo') , 'Holesaws',.)
@@ -226,14 +226,14 @@ ml = ml %>%
           %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(Titulo_Publicacion,'broca para concreto|broca multi|broca multimaterial') , 'Impact+Rot.Drill Bit',.)
           %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(Titulo_Publicacion,'talhadeira sds') , 'Chisels',.)
           %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(Titulo_Publicacion,'faca plaina|faca para plaina|faca p plaina') , 'Components',.)
-          %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(Titulo_Publicacion,'disco diamantado|disco procelanato|broca diamantada') , 'DiamondDiscs/CoreBit',.) 
+          %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(Titulo_Publicacion,'disco diamantado|disco procelanato|broca diamantada') , 'DiamondDiscs/CoreBit',.)
           %>% if_else(Categoria_Nivel_3 == 'Accessories' & str_detect(Titulo_Publicacion,'maçarico') , 'Others tools',.)
-   ) 
+   )
 
 
 # ___6.2 MEASURING TOOLS ----
 ml = ml %>% mutate(
-   Categoria_Nivel_5 = Categoria_Nivel_5 
+   Categoria_Nivel_5 = Categoria_Nivel_5
    %>% if_else(str_detect(. ,'N[íi]v[ée]') & str_detect(., 'L[áa]ser'), 'Leveling', .)
    %>% if_else(str_detect(. ,'[Mm]edid|[Tt]ren') & str_detect(. ,'L[áa]se|[Dd]ista') , 'Laser Measuring',.)
    %>% if_else(str_detect(Titulo_Publicacion, "gll[ 32]|gcl[ 23]|gpl[ 5]|grl|dw08|skt10|pro3|lv-03"), 'Leveling', .)
@@ -249,22 +249,22 @@ ml = ml %>% mutate(
    %>% if_else(. == 'Laser measuring' & str_detect(Titulo_Publicacion,'pro3|lv-03') , 'Leveling',.)
    %>% if_else(. == 'Laser measuring' & str_detect(Titulo_Publicacion,'roda|analogic') , 'Measuring wheel',.)
    %>% if_else(. == 'Laser measuring' & str_detect(Titulo_Publicacion,'detector') , 'Metal detect',.)
-   %>% if_else(Categoria_Nivel_3 == 'Measuring Tools' & 
-                  str_detect(Titulo_Publicacion,'trena|medidor') == TRUE & 
+   %>% if_else(Categoria_Nivel_3 == 'Measuring Tools' &
+                  str_detect(Titulo_Publicacion,'trena|medidor') == TRUE &
                   str_detect(Titulo_Publicacion,'laser|digital') == FALSE  , 'Measuring Tape',.)
-   %>% if_else(Categoria_Nivel_3 == 'Measuring Tools' & 
+   %>% if_else(Categoria_Nivel_3 == 'Measuring Tools' &
                   . %notin% c('Leveling','Laser measuring','Measuring Tape', 'Measuring wheel','Metal detect',
                               'Measuring Angle','Nivel optico','Others MT'),'Others MT', .)
 )
 
 
-ml = ml %>% 
-   mutate(Categoria_Nivel_5 = Categoria_Nivel_5 %>% str_to_title() 
+ml = ml %>%
+   mutate(Categoria_Nivel_5 = Categoria_Nivel_5 %>% str_to_title()
           # Tool boxes
           %>% if_else(Categoria_Nivel_3 == 'Toolboxes' & str_detect(Categoria_Nivel_5,'Bols|Moch|Port') , 'Bags',.)
           %>% if_else(Categoria_Nivel_3 == 'Toolboxes' & str_detect(Categoria_Nivel_5,'Caj|Caix|Male') , 'Toolboxes',.)
           %>% if_else(Categoria_Nivel_3 == 'Toolboxes' & str_detect(Categoria_Nivel_5,'Carr') , 'Troley',.)
-          
+
           #PowerTools
           %>% if_else(Categoria_Nivel_3 == 'PowerTools' & str_detect(Categoria_Nivel_5,'Aguj|Furadeira de Bancada|Pedest|Taladros de Banco') , 'Bench drill',.)
           %>% if_else(Categoria_Nivel_3 == 'PowerTools' & str_detect(Categoria_Nivel_5,'Amol|Esmeri') , 'Angle grinder',.)
@@ -307,7 +307,7 @@ ml = ml %>%
           %>% if_else(Categoria_Nivel_3 == 'PowerTools' & str_detect(Categoria_Nivel_5,'Serras') , 'Saws',.)
           %>% if_else(Categoria_Nivel_3 == 'PowerTools' & str_detect(Categoria_Nivel_5,'Serras|Sierra') , 'Saws',.)
           %>% if_else(Categoria_Nivel_3 == 'PowerTools' & str_detect(Categoria_Nivel_5,'Vibrador') , 'Concrete vibrator',.)
-          
+
           %>% if_else(Categoria_Nivel_3 == 'PowerTools' & str_detect(Titulo_Publicacion,'cortadora de concreto|marmol|m[áa]rm') , 'Marble Saw',.)
           %>% if_else(Categoria_Nivel_3 == 'PowerTools' & str_detect(Titulo_Publicacion,'sierra circular|serra circular') , 'Cicular saw',.)
           %>% if_else(Categoria_Nivel_3 == 'PowerTools' & str_detect(Titulo_Publicacion,'caladora|tico') , 'Jigsaw',.)
@@ -322,10 +322,10 @@ ml = ml %>%
           %>% if_else(Categoria_Nivel_3 == 'PowerTools' & str_detect(Titulo_Publicacion,'serra de bancada|sierra banco|esquad|cortadora') , 'Bench saws',.)
           %>% if_else(Categoria_Nivel_3 == 'PowerTools' & str_detect(Titulo_Publicacion,'caneta el[ée]') , 'Rotary tool',.)
           %>% if_else(Categoria_Nivel_3 == 'PowerTools' & str_detect(Titulo_Publicacion,'de banco|de bancada') , 'Other Benchtops',.)
-          
+
           %>% if_else(Categoria_Nivel_6 == 'worker' & str_detect(Titulo_Publicacion,'motoesmeril|moto esmeril') , 'Other Benchtops',.)
-          
-          
+
+
           %>% if_else(Categoria_Nivel_5 == 'Kits & Sets' & str_detect(Titulo_Publicacion,'parafusadeira|taladro|furad|atornill') , 'Drill/ Drivers',.)
           %>% if_else(Categoria_Nivel_5 == 'Kits & Sets' & str_detect(Titulo_Publicacion,'serra m[áa]rm') , 'Marble Saw',.)
           %>% if_else(Categoria_Nivel_5 == 'Kits & Sets' & str_detect(Titulo_Publicacion,'martel|rotoma') , 'Rotary Hammer',.)
@@ -335,21 +335,21 @@ ml = ml %>%
           %>% if_else(Categoria_Nivel_5 == 'Kits & Sets' & str_detect(Titulo_Publicacion,'lijad|lixad') , 'Hand sander',.)
           %>% if_else(Categoria_Nivel_5 == 'Kits & Sets' & str_detect(Titulo_Publicacion,'plaina|cepillo el[ée]') , 'Planers',.)
           %>% if_else(Categoria_Nivel_5 == 'Kits & Sets' & str_detect(Titulo_Publicacion,'policorte|sierra de mes|ingletad|sensitiv') , 'Bench saws',.)
-          
-          
+
+
           %>% if_else(Categoria_Nivel_3 == 'PowerTools' & str_detect(Categoria_Nivel_5,'Eléctrico') , 'Others tools',.)
           %>% if_else(Categoria_Nivel_3 == 'Others' & str_detect(Titulo_Publicacion,'furadei|parafus|taladro') , 'Drill/ Drivers',.)
           %>% if_else(Categoria_Nivel_3 == 'Others' & str_detect(Titulo_Publicacion,'tupia') , 'Router tool',.)
-          
+
    )
 
 
 ##
 # 09. RECATEGORIZAÇÃO DO SEGEMENTO parte >> II ----
 # jogaR os kits e sets para AC, criar bench, criar micro retifica
-## 
+##
 ml = ml %>% mutate(
-   Categoria_Nivel_3 = Categoria_Nivel_3 
+   Categoria_Nivel_3 = Categoria_Nivel_3
    %>% if_else(str_detect(Categoria_Nivel_5, "Screw Driving & Sets|Dust"),'Accessories',.)
    %>% if_else(str_detect(Categoria_Nivel_5, "Measu|meas|MT|Leve"),'Measuring Tools',.)
    %>% if_else(str_detect(Categoria_Nivel_5, "Toolbox"),'Toolboxes',.)
@@ -361,23 +361,23 @@ ml = ml %>% mutate(
                                             |Batery and Charges|tools|Demol"),'PowerTools',.)
 )
 
-## 
+##
 # 07. AJUSTE NICKNAME VENDEDOR  ----
-# Obs: Ajuste a parti do excel dePara_ML(aba: Clas_cliente) 
+# Obs: Ajuste a parti do excel dePara_ML(aba: Clas_cliente)
 #      entao todas alterações devem ser feitas diretamente no arquivo
 #
-## 
+##
 vendedor <- read_excel("~Documents/_R/Data.frame/Base Apoio/dePara_ML.xlsx", sheet = 'Clas_Cliente')
-ClienteBosch <- as_character(vendedor$Nickname_Vendedor) 
-ClienteTT <- vendedor %>% filter(CANAL == 'TT') %>% select(Nickname_Vendedor) 
+ClienteBosch <- as_character(vendedor$Nickname_Vendedor)
+ClienteTT <- vendedor %>% filter(CANAL == 'TT') %>% select(Nickname_Vendedor)
 ClienteMP <- vendedor %>% filter(CANAL == 'MP') %>% select(Nickname_Vendedor)
 
-ml = mutate(ml, 
+ml = mutate(ml,
             # Acerto do Nick Vendedor
             Nickname_Vendedor = Nickname_Vendedor
-            %>% str_replace_all(.,"LOJA_DO_MECANICO_OFICIAL 2","LOJA_DO_MECANICO_OFICIAL") 
-            %>% str_replace_all(.,"CEFEQFERRAMENTAS","CEFEQ FERRAMENTAS") 
-            %>% str_replace_all(.,"SIPARFERRAMENTA","SIPAR FERRAMENTAS")  
+            %>% str_replace_all(.,"LOJA_DO_MECANICO_OFICIAL 2","LOJA_DO_MECANICO_OFICIAL")
+            %>% str_replace_all(.,"CEFEQFERRAMENTAS","CEFEQ FERRAMENTAS")
+            %>% str_replace_all(.,"SIPARFERRAMENTA","SIPAR FERRAMENTAS")
             %>% str_replace_all(.,"KAUSBENPARAFUSOS","KAUSBEN PARAFUSOS")
             %>% str_replace_all(.,"RESSEG DISTRIBUIDORA","RESSEGDISTRIBUIDORALTDA")
             # Cliente Bosch
@@ -390,7 +390,7 @@ ml = mutate(ml,
               , Nickname_Vendedor %in% ClienteMP$Nickname_Vendedor ~ 'MP'
               , TRUE ~ '-'
              )
-            ) # Fim Mutate 
+            ) # Fim Mutate
 
 rm(ClienteMP,ClienteTT, ClienteBosch, vendedor)
 
@@ -412,40 +412,40 @@ ml = mutate(ml,
 
 
 
-## 
+##
 # 08. HIGENIZAÇAO I  ------
-# obj: Remover grupo de auncios que não fazem sentido com o 
+# obj: Remover grupo de auncios que não fazem sentido com o
 #      negocio da bosch
 #
-## 
+##
 
 # Passo 1: Criar o vetor de keywords para deletar (Baseado na planilha dePara_ML)
 delete_keyword <- read_excel("~Documents/_R/Data.frame/Base Apoio/dePara_ML.xlsx", sheet = 'KeyWord_excluir')
 delete_palavras_chaves = as_character(delete_keyword$Titulo_Publicacion) %>%  str_c(.,"|")
-delete_palavras_chaves = toString(delete_palavras_chaves) %>% 
-   str_replace_all(.,"\\|, ","\\|") %>% str_sub(., end = -2) 
+delete_palavras_chaves = toString(delete_palavras_chaves) %>%
+   str_replace_all(.,"\\|, ","\\|") %>% str_sub(., end = -2)
 
-# Passo 2: Criar filtros segmentos sem classificaçao 
+# Passo 2: Criar filtros segmentos sem classificaçao
 filter_other = ml %>%
-   filter(str_detect(Categoria_Nivel_3, 'Others') == TRUE) %>% 
+   filter(str_detect(Categoria_Nivel_3, 'Others') == TRUE) %>%
    select(Codigo_de_Publicacion, Titulo_Publicacion) %>% unique()
 
 filter_termometro = ml %>%
-   filter(str_detect(Categoria_Nivel_5, 'Therm') == TRUE) %>% 
+   filter(str_detect(Categoria_Nivel_5, 'Therm') == TRUE) %>%
    select(Codigo_de_Publicacion, Titulo_Publicacion) %>% unique()
 
 filter_acessorios = ml %>%
-   filter(Categoria_Nivel_3 == 'Accessories' & str_detect(Categoria_Nivel_5, 'Suports') == TRUE) %>% 
+   filter(Categoria_Nivel_3 == 'Accessories' & str_detect(Categoria_Nivel_5, 'Suports') == TRUE) %>%
    select(Codigo_de_Publicacion, Titulo_Publicacion) %>% unique()
 
 
-filter_palavras_chaves = ml %>% 
-   filter(str_detect(Titulo_Publicacion, delete_palavras_chaves)==TRUE) %>% 
+filter_palavras_chaves = ml %>%
+   filter(str_detect(Titulo_Publicacion, delete_palavras_chaves)==TRUE) %>%
    select(Codigo_de_Publicacion, Titulo_Publicacion)
 
 
-filter_palavras_ac = ml %>% 
-   filter(Categoria_Nivel_3 == 'Accessories' & str_detect(Titulo_Publicacion,delete_palavras_chaves)==TRUE) %>% 
+filter_palavras_ac = ml %>%
+   filter(Categoria_Nivel_3 == 'Accessories' & str_detect(Titulo_Publicacion,delete_palavras_chaves)==TRUE) %>%
    select(Codigo_de_Publicacion, Titulo_Publicacion)
 
 # Passo 3: Exluir da base os aunicios
@@ -464,20 +464,20 @@ rm(filter_palavras_chaves, filter_termometro, filter_other, filter_palavras_ac, 
 
 
 ##
-# 12. AJUSTE CAMBIO ---- 
+# 12. AJUSTE CAMBIO ----
 ##
 
 # Ajustes na base
 cambio = read_excel("~Documents/_R/Campanha ML/cambioo.xlsx"
-                    , sheet = 'Exchange Rates ') %>% .[21:nrow(.),3:ncol(.)] 
+                    , sheet = 'Exchange Rates ') %>% .[21:nrow(.),3:ncol(.)]
 names(cambio) <- str_c("v",seq(1:13))
 cambio = cambio %>%
    mutate(ch = str_c(v3, v4, str_sub(v8,1,2)) %>% str_to_upper()
           ,v9 = as.numeric(v9)
-          ,v12 = as.numeric(v12)) %>% 
-   select(ch,v9,v12) 
+          ,v12 = as.numeric(v12)) %>%
+   select(ch,v9,v12)
 
-# Criacao da chave e transformaÃ§ao 
+# Criacao da chave e transformaÃ§ao
 ml = mutate(ml, ch = str_c(year(Mes), month(Mes),str_sub(pais,1,2)) %>% str_to_upper())
 ml = left_join(ml, cambio, by = 'ch')
 ml = mutate(ml, Monto_Vendido_USD = Monto_Vendido_Moneda_Local/v9
@@ -491,97 +491,97 @@ rm(cambio)
 #mlbackup2 -> ml
 
 
-## 
+##
 # 10. AJUSTE DE MARCA ----
 ##
-# Passo 1: Capta informação a partir do titulo da publicação 
+# Passo 1: Capta informação a partir do titulo da publicação
 ml = mutate(ml
             ,Categoria_Nivel_6 = as.character(Categoria_Nivel_6)
             # %>% if_else(. %in% c('-', 'Outras Marcas', 'Outros', 'Otras Marcas', 'otros'), Marca, .)
-            %>% str_remove_all(., "&") %>% str_trim(.) %>% str_replace_all(.," +"," ") 
-            %>% if_else(str_detect(., pattern = "ecker$")==TRUE, 'Black & Decker', .) 
+            %>% str_remove_all(., "&") %>% str_trim(.) %>% str_replace_all(.," +"," ")
+            %>% if_else(str_detect(., pattern = "ecker$")==TRUE, 'Black & Decker', .)
             # PREENCHIMENTO DA MARCA A PARTIR DO TITULO DO AUNUNCIO
             %>% if_else(str_detect(Titulo_Publicacion, 'bosc|gll[ 32]|gcl[ 23]|gpl[ 5]|grl|gsb|gsr|gws') == TRUE, 'Bosch', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'skil') == TRUE, 'Skil', .)
-            %>% if_else(str_detect(Titulo_Publicacion, 'dremel') == TRUE, 'Dremel', .) 
+            %>% if_else(str_detect(Titulo_Publicacion, 'dremel') == TRUE, 'Dremel', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'black & decker|black&decker|black[ -+]decke') == TRUE, 'Black & Decker', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'dewalt|dcd') == TRUE, 'Dewalt', .)
-            %>% if_else(str_detect(Titulo_Publicacion, 'stanley') == TRUE, 'Stanley', .) 
+            %>% if_else(str_detect(Titulo_Publicacion, 'stanley') == TRUE, 'Stanley', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'makita') == TRUE, 'Makita', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'einhell') == TRUE, 'Einhell', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'hilti') == TRUE, 'Hilti', .)
-            %>% if_else(str_detect(Titulo_Publicacion, 'milwaukee') == TRUE, 'Milwaukee', .) 
-            %>% if_else(str_detect(Titulo_Publicacion, 'metabo') == TRUE, 'Metabo', .) 
-            %>% if_else(str_detect(Titulo_Publicacion, 'wurth') == TRUE, 'Wurth', .) 
+            %>% if_else(str_detect(Titulo_Publicacion, 'milwaukee') == TRUE, 'Milwaukee', .)
+            %>% if_else(str_detect(Titulo_Publicacion, 'metabo') == TRUE, 'Metabo', .)
+            %>% if_else(str_detect(Titulo_Publicacion, 'wurth') == TRUE, 'Wurth', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'bauker') == TRUE, 'Bauker', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'dexter') == TRUE, 'Dexter', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'carrefour') == TRUE, 'Carrefour', .)
-            %>% if_else(str_detect(Titulo_Publicacion, 'mondial|fpf-') == TRUE, 'Mondial', .) 
-            %>% if_else(str_detect(Titulo_Publicacion, 'vonder|pfv012') == TRUE, 'Vonder', .) 
-            %>% if_else(str_detect(Titulo_Publicacion, 'philco') == TRUE, 'Philco', .) 
-            %>% if_else(str_detect(Titulo_Publicacion, 'wesco') == TRUE, 'Wesco', .) 
-            %>% if_else(str_detect(Titulo_Publicacion, 'hammer') == TRUE, 'Hammer', .) 
+            %>% if_else(str_detect(Titulo_Publicacion, 'mondial|fpf-') == TRUE, 'Mondial', .)
+            %>% if_else(str_detect(Titulo_Publicacion, 'vonder|pfv012') == TRUE, 'Vonder', .)
+            %>% if_else(str_detect(Titulo_Publicacion, 'philco') == TRUE, 'Philco', .)
+            %>% if_else(str_detect(Titulo_Publicacion, 'wesco') == TRUE, 'Wesco', .)
+            %>% if_else(str_detect(Titulo_Publicacion, 'hammer') == TRUE, 'Hammer', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'gamma|g1910') == TRUE, 'Gamma', .)
-            %>% if_else(str_detect(Titulo_Publicacion, 'tramontina') == TRUE, 'Tramontina', .) 
-            %>% if_else(str_detect(Titulo_Publicacion, 'schulz') == TRUE, 'Schulz', .) 
-            %>% if_else(str_detect(Titulo_Publicacion, 'goodyear') == TRUE, 'Goodyear', .) 
+            %>% if_else(str_detect(Titulo_Publicacion, 'tramontina') == TRUE, 'Tramontina', .)
+            %>% if_else(str_detect(Titulo_Publicacion, 'schulz') == TRUE, 'Schulz', .)
+            %>% if_else(str_detect(Titulo_Publicacion, 'goodyear') == TRUE, 'Goodyear', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'dwt') == TRUE, 'Dwt', .)
-            %>% if_else(str_detect(Titulo_Publicacion, 'brit[âa]nia') == TRUE, 'Britania', .) 
+            %>% if_else(str_detect(Titulo_Publicacion, 'brit[âa]nia') == TRUE, 'Britania', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'songhe') == TRUE, 'Songhe', .)
-            %>% if_else(str_detect(Titulo_Publicacion, 'ferrari') == TRUE, 'Ferrari', .) 
+            %>% if_else(str_detect(Titulo_Publicacion, 'ferrari') == TRUE, 'Ferrari', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'fortg') == TRUE, 'Fortg', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'ingco') == TRUE, 'Ingco', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'maksiwa') == TRUE, 'Maksiwa', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'worx') == TRUE, 'Worx', .)
-            %>% if_else(str_detect(Titulo_Publicacion, 'wagner') == TRUE, 'Wagner', .) 
+            %>% if_else(str_detect(Titulo_Publicacion, 'wagner') == TRUE, 'Wagner', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'nagano') == TRUE, 'Nagano', .)
-            %>% if_else(str_detect(Titulo_Publicacion, 'deko|3d 12|12linha') == TRUE, 'Deko', .) 
-            %>% if_else(str_detect(Titulo_Publicacion, 'clipper') == TRUE, 'Clipper', .) 
+            %>% if_else(str_detect(Titulo_Publicacion, 'deko|3d 12|12linha') == TRUE, 'Deko', .)
+            %>% if_else(str_detect(Titulo_Publicacion, 'clipper') == TRUE, 'Clipper', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'mtx') == TRUE, 'Mtx', .)
-            %>% if_else(str_detect(Titulo_Publicacion, 'siga tools') == TRUE, 'Siga Tools', .) 
+            %>% if_else(str_detect(Titulo_Publicacion, 'siga tools') == TRUE, 'Siga Tools', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'awt') == TRUE, 'Awt', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'xiaomi') == TRUE, 'Xiaomi', .)
             %>% if_else(str_detect(Titulo_Publicacion, 'starrett') == TRUE, 'Starret', .)
             ## Categorizaao usando descricao completa
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'bosch' ) == TRUE, 'Bosch', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'skil' ) == TRUE, 'Skil', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'dremel' ) == TRUE, 'Dremel', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'black & decker' ) == TRUE, 'Black & Decker', .) 
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'bosch' ) == TRUE, 'Bosch', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'skil' ) == TRUE, 'Skil', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'dremel' ) == TRUE, 'Dremel', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'black & decker' ) == TRUE, 'Black & Decker', .)
             %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'dewalt' ) == TRUE, 'Dewalt', .)
             %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'stanley' ) == TRUE, 'Stanley', .)
             %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'makita' ) == TRUE, 'Makita', .)
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'makita mt' ) == TRUE, 'Makita Mt', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'einhell' ) == TRUE, 'Einhell', .) 
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'makita mt' ) == TRUE, 'Makita Mt', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'einhell' ) == TRUE, 'Einhell', .)
             %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'hilti' ) == TRUE, 'Hilti', .)
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'milwaukee' ) == TRUE, 'Milwaukee', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'metabo' ) == TRUE, 'Metabo', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'w[ü]rth|wrth' ) == TRUE, 'Wurth', .) 
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'milwaukee' ) == TRUE, 'Milwaukee', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'metabo' ) == TRUE, 'Metabo', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'w[ü]rth|wrth' ) == TRUE, 'Wurth', .)
             %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'bauker' ) == TRUE, 'Bauker', .)
             %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'dexter' ) == TRUE, 'Dexter', .)
             %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'carrefour' ) == TRUE, 'Carrefour', .)
             %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'mondial' ) == TRUE, 'Mondial', .)
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'vonder|pfv012' ) == TRUE, 'Vonder', .) 
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'vonder|pfv012' ) == TRUE, 'Vonder', .)
             %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'philco' ) == TRUE, 'Philco', .)
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'wesco' ) == TRUE, 'Wesco', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'hammer' ) == TRUE, 'Hammer', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'gamma' ) == TRUE, 'Gamma', .) 
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'wesco' ) == TRUE, 'Wesco', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'hammer' ) == TRUE, 'Hammer', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'gamma' ) == TRUE, 'Gamma', .)
             %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'tramontina' ) == TRUE, 'Tramontina', .)
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'schulz' ) == TRUE, 'Schulz', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'goodyear' ) == TRUE, 'Goodyear', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'dwt' ) == TRUE, 'Dwt', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'brit[âa]nia' ) == TRUE, 'Britania', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'songhe' ) == TRUE, 'Songhe', .) 
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'schulz' ) == TRUE, 'Schulz', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'goodyear' ) == TRUE, 'Goodyear', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'dwt' ) == TRUE, 'Dwt', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'brit[âa]nia' ) == TRUE, 'Britania', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'songhe' ) == TRUE, 'Songhe', .)
             %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'ferrari' ) == TRUE, 'Ferrari', .)
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'fortg' ) == TRUE, 'Fortg', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'ingco' ) == TRUE, 'Ingco', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'maksiwa' ) == TRUE, 'Maksiwa', .) 
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'fortg' ) == TRUE, 'Fortg', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'ingco' ) == TRUE, 'Ingco', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'maksiwa' ) == TRUE, 'Maksiwa', .)
             %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'worx' ) == TRUE, 'Worx', .)
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'wagner' ) == TRUE, 'Wagner', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'nagano' ) == TRUE, 'Nagano', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'deko|3d 12|12linha' ) == TRUE, 'Deko', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'clipper' ) == TRUE, 'Clipper', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'siga tools' ) == TRUE, 'Siga Tools', .) 
-            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'awt' ) == TRUE, 'Awt', .) 
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'wagner' ) == TRUE, 'Wagner', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'nagano' ) == TRUE, 'Nagano', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'deko|3d 12|12linha' ) == TRUE, 'Deko', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'clipper' ) == TRUE, 'Clipper', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'siga tools' ) == TRUE, 'Siga Tools', .)
+            %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'awt' ) == TRUE, 'Awt', .)
             %>% if_else(Categoria_Nivel_6 == '-' & str_detect(Categoria_Completa,'[ -]mtx' ) == TRUE, 'Mtx', .)
             %>% if_else( str_detect(., "VEKCER|Veker|VECKER"), 'Veker', .)
             %>% if_else( str_detect(., "otros|Otros"), 'Other', .)
@@ -591,12 +591,12 @@ ml = mutate(ml
 ) #fim mutate
 
 # Passo 2: RECUPERAR INFORMAÇÃO DE MARCA DO CAMPO 'marca'
-# Obj: A parti da info que temos 
-ml = ml %>% 
-   mutate(Marca = str_to_title(Marca) 
+# Obj: A parti da info que temos
+ml = ml %>%
+   mutate(Marca = str_to_title(Marca)
           %>% str_remove_all(.,"[0-9]")
           %>% if_else(str_length(.) < 3, "Sin Marca",.)
-          ,Categoria_Nivel_6 = Categoria_Nivel_6 
+          ,Categoria_Nivel_6 = Categoria_Nivel_6
           %>% if_else(str_to_title(.) %in% c('-', 'Outras Marcas', 'Outros', 'Otras Marcas', 'Otros'), Marca, .)
           %>% if_else(str_detect(. ,"[Ss]imila"), "Similar(Imitação)", .)
           %>% str_to_lower()
@@ -606,12 +606,12 @@ ml = ml %>%
 # Passo 3: AGRUPAMENTO DE MARCAS
 #ml %>% count(Categoria_Nivel_6) %>% arrange(desc(n)) %>% view()
 
-Share_marca = ml %>% group_by(pais, Categoria_Nivel_6) %>% summarise(Valor_EURwoc = sum(Valor_EURwoc)) %>% 
+Share_marca = ml %>% group_by(pais, Categoria_Nivel_6) %>% summarise(Valor_EURwoc = sum(Valor_EURwoc)) %>%
    mutate(share = round((Valor_EURwoc/sum(Valor_EURwoc))*100, 2),
-          ch    = paste0(pais, Categoria_Nivel_6)) %>% 
+          ch    = paste0(pais, Categoria_Nivel_6)) %>%
    filter(share < 1) %>% select(ch) %>%  unique() %>% as_tibble()
 
-ml <- ml %>% 
+ml <- ml %>%
    mutate(Categoria_Nivel_1 = ""
           %>% if_else(Categoria_Nivel_6 %in% c('bosch','dremel','skil') == TRUE, "Bosch Grp",.)
           %>% if_else(Categoria_Nivel_6 %in% c('dewalt','stanley','black & decker') == TRUE, "SBD",.)
@@ -627,12 +627,12 @@ ml <- ml %>%
    )
 
 ##
-# 11. DELETAR MARCAS ---- 
+# 11. DELETAR MARCAS ----
 # Obj: Exluir da base todas as marcas que não tem relação com o nosso negocio
 ##
 ml = mutate(ml,Categoria_Nivel_6 = str_to_lower(Categoria_Nivel_6))
 delete_marcas <- read_excel("~/Documents/_R/Data.frame/Base Apoio/dePara_ML.xlsx", sheet = 'excluirMarcas')
-delete_marcas <- as_character(delete_marcas$Categoria_nivel_6) 
+delete_marcas <- as_character(delete_marcas$Categoria_nivel_6)
 filter_marcas = ml %>% filter(Categoria_Nivel_6 %in% delete_marcas )
 ml = ml %>% filter(Codigo_de_Publicacion %notin% filter_marcas$Codigo_de_Publicacion)
 rm(filter_marcas,delete_marcas)
@@ -650,8 +650,8 @@ var = str_c("|",seq(100,999,10),"[ w]") %>%
    str_replace_all(.,", ","") %>%
    str_sub(2,nchar(.))
 
-ml = ml %>% 
-   mutate(Moneda = 'Not assigned' 
+ml = ml %>%
+   mutate(Moneda = 'Not assigned'
           ### Menor que 10V
           %>% if_else(str_detect(Titulo_Publicacion, "3[,.]6v|3,6 v|3.6 v|4[,.]8v|4[,.]8 v|9[,.]6v|9[,.]6 v|pf-08"), '<10v', .)
           ### 12V
@@ -665,7 +665,7 @@ ml = ml %>%
           %>% if_else(. == 'Not assigned' & str_detect(Titulo_Publicacion, var), 'Corded', .)
           %>% if_else(. == 'Not assigned' & str_detect(Titulo_Publicacion, 'gex 125|4100nh3z|esmerilhadeira 4.1/2 9002|110[wv]|220[wv]|127[wv]'), 'Corded', .)
           %>% if_else(. == 'Not assigned' & Categoria_Nivel_3 == 'PowerTools' & str_detect(Titulo_Publicacion, 'parafusadeira|furadeira|esmeri|serra|tupia|plania|plaina|politriz|lixadeira|pancada|soprador|marte'), 'Corded', .)
-          ### Cordless [not assigned]   
+          ### Cordless [not assigned]
           %>% if_else(str_detect(Titulo_Publicacion, "36v|36 v|36-v"), 'Cordless[not assigned]', .)
           %>% if_else(. == 'Not assigned' & str_detect(Titulo_Publicacion, 'bateria|s[ /]fio|sem fio|brushless|inal[aá]mbric'), 'Cordless[not assigned]', .)
           ### Outras BU
@@ -679,23 +679,23 @@ ml =  rename(ml, Tipo_ferramenta = Moneda)
 ml %>% tabyl(Tipo_ferramenta) %>%  arrange(desc(n))
 
 
-## 
+##
 # 14. PADRONIZAR DADOS ANTES DE SALVAR ----
 # #
-ml = ml %>% select(.,- Link_a_Publicacion.x,-Link_a_Publicacion.y)   
+ml = ml %>% select(.,- Link_a_Publicacion.x,-Link_a_Publicacion.y)
 ml =  ml %>% mutate(
    Categoria_Nivel_6 = str_to_title(Categoria_Nivel_6)
    ,Categoria_Nivel_5 = str_to_title(Categoria_Nivel_5)
 )
 ml = as_tibble(ml)
 
-write.csv2(ml,"~/Documents/_R/Data.frame/202008_df_ml_LA_setv2.csv", row.names = FALSE, fileEncoding ="UTF-8")  
+write.csv2(ml,"~/Documents/_R/Data.frame/202008_df_ml_LA_setv2.csv", row.names = FALSE, fileEncoding ="UTF-8")
 
-fwrite(ml,"~/Documents/_R/Data.frame/202008_df_ml_LA_set.csv", row.names = FALSE, sep = ';') 
+fwrite(ml,"~/Documents/_R/Data.frame/202008_df_ml_LA_set.csv", row.names = FALSE, sep = ';')
 
-ml1 = fread("~/Documents/_R/Data.frame/202008_df_ml_LA_set.csv", sep=';') 
+ml1 = fread("~/Documents/_R/Data.frame/202008_df_ml_LA_set.csv", sep=';')
 
-# 15.ACABOU !!! 
-#     \0/  
-#      |   
-#     / \  
+# 15.ACABOU !!!
+#     \0/
+#      |
+#     / \
